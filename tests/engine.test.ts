@@ -382,3 +382,218 @@ describe("Next.js errors", () => {
     expect(result.matches[0].explanation).toContain("Server Component");
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Edge cases
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("Edge cases", () => {
+  it("handles empty string input", () => {
+    const result = analyze("");
+    expect(result.matches).toHaveLength(0);
+    expect(result.patternsChecked).toBeGreaterThan(0);
+    expect(result.duration).toBeGreaterThanOrEqual(0);
+  });
+
+  it("handles whitespace-only input", () => {
+    const result = analyze("   \n\t\n   ");
+    expect(result.matches).toHaveLength(0);
+  });
+
+  it("finds an error buried in 10000+ chars of garbage", () => {
+    const garbage = "x".repeat(5000);
+    const input = `${garbage}\nTypeError: Cannot read properties of undefined (reading 'foo')\n${garbage}`;
+    const result = analyze(input);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].pattern).toContain("TypeError");
+  });
+
+  it("handles input with ANSI escape codes mixed in", () => {
+    const ansiInput =
+      "\x1b[31mError:\x1b[0m \x1b[1mCannot find module\x1b[0m 'express'";
+    const result = analyze(ansiInput);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].explanation).toContain("express");
+  });
+
+  it("detects multiple different errors in one input", () => {
+    const input = [
+      "TypeError: Cannot read properties of undefined (reading 'x')",
+      "RangeError: Maximum call stack size exceeded",
+      "Error: Cannot find module 'lodash'",
+    ].join("\n");
+    const result = analyze(input, { maxResults: 10 });
+    expect(result.matches.length).toBeGreaterThanOrEqual(2);
+    const patterns = result.matches.map((m) => m.pattern).join(" ");
+    expect(patterns).toContain("TypeError");
+  });
+
+  it("handles input with only stack trace lines (no error message)", () => {
+    const input = [
+      "    at Object.<anonymous> (/app/index.js:10:15)",
+      "    at Module._compile (internal/modules/cjs/loader.js:999:30)",
+      "    at Module._extensions..js (internal/modules/cjs/loader.js:1027:10)",
+      "    at Module.load (internal/modules/cjs/loader.js:863:32)",
+    ].join("\n");
+    const result = analyze(input);
+    // May or may not match, but should not throw
+    expect(result.patternsChecked).toBeGreaterThan(0);
+    expect(result.duration).toBeGreaterThanOrEqual(0);
+  });
+
+  it("handles unicode characters in error messages", () => {
+    const result = analyze("Error: Cannot find module '日本語パッケージ'");
+    expect(result.matches.length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Real-world stack traces
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("Real-world stack traces", () => {
+  it("matches full Node.js MODULE_NOT_FOUND with require stack", () => {
+    const trace = `node:internal/modules/cjs/loader:1078
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- /app/src/server.js
+- /app/src/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1075:15)
+    at Module._load (node:internal/modules/cjs/loader:920:27)
+    at Module.require (node:internal/modules/cjs/loader:1141:19)
+    at require (node:internal/modules/cjs/helpers:110:18)
+    at Object.<anonymous> (/app/src/server.js:1:17)
+    at Module._compile (node:internal/modules/cjs/loader:1254:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/app/src/server.js', '/app/src/index.js' ]
+}`;
+    const result = analyze(trace);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].explanation).toContain("express");
+  });
+
+  it("matches full React hydration error with component stack", () => {
+    const trace = `Unhandled Runtime Error
+Error: Hydration failed because the initial UI does not match what was rendered on the server.
+
+See more info here: https://nextjs.org/docs/messages/react-hydration-error
+
+Component Stack:
+    at div
+    at Layout (webpack-internal:///./components/Layout.tsx:12:11)
+    at MyApp (webpack-internal:///./pages/_app.tsx:8:24)
+    at ErrorBoundary (webpack-internal:///./node_modules/next/dist/client/components/error-boundary.js:33:9)
+    at ReactDevOverlay (webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/hot-reloader.js:56:21)
+    at Router (webpack-internal:///./node_modules/next/dist/client/router.js:112:15)`;
+    const result = analyze(trace);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].pattern).toContain("Hydration");
+  });
+
+  it("matches full Python traceback with multiple frames", () => {
+    const trace = `Traceback (most recent call last):
+  File "/app/main.py", line 42, in <module>
+    app.run()
+  File "/app/server.py", line 18, in run
+    self.setup_routes()
+  File "/app/server.py", line 25, in setup_routes
+    from flask import Flask
+ModuleNotFoundError: No module named 'flask'`;
+    const result = analyze(trace);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(
+      result.matches[0].fixes.some((f) => f.command?.includes("pip install flask"))
+    ).toBe(true);
+  });
+
+  it("matches full Rust compiler error with source code snippets", () => {
+    const trace = `error[E0382]: use of moved value: \`data\`
+ --> src/main.rs:15:20
+  |
+12 |     let data = vec![1, 2, 3];
+  |         ---- move occurs because \`data\` has type \`Vec<i32>\`, which does not implement the \`Copy\` trait
+13 |     let moved = data;
+  |                 ---- value moved here
+14 |
+15 |     println!("{:?}", data);
+  |                      ^^^^ value used here after move
+  |
+  = note: for more information, see https://doc.rust-lang.org/error_codes/E0382.html
+
+error: aborting due to 1 previous error`;
+    const result = analyze(trace);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].explanation).toContain("moved");
+  });
+
+  it("matches full Go panic with goroutine dump", () => {
+    const trace = `goroutine 1 [running]:
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x4a3b2c]
+
+goroutine 1 [running]:
+main.processRequest(0x0)
+        /app/main.go:45 +0x2c
+main.handler(0xc0000b4000)
+        /app/main.go:32 +0x1f
+net/http.HandlerFunc.ServeHTTP(0x4c1230, 0xc0000b4000, 0xc000098200)
+        /usr/local/go/src/net/http/server.go:2109 +0x44
+net/http.(*ServeMux).ServeHTTP(0x5e8720, 0xc0000b4000, 0xc000098200)
+        /usr/local/go/src/net/http/server.go:2487 +0x149
+exit status 2`;
+    const result = analyze(trace);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].explanation).toContain("nil");
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Confidence scoring
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("Confidence scoring", () => {
+  it("gives high confidence (>0.9) for exact well-known patterns", () => {
+    const result = analyze(
+      "SyntaxError: Cannot use import statement outside a module"
+    );
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.matches[0].confidence).toBeGreaterThan(0.9);
+  });
+
+  it("gives lower confidence for generic/ambiguous matches", () => {
+    const result = analyze("TypeError: something weird happened", {
+      minConfidence: 0,
+    });
+    // If it matches at all, confidence should be lower than an exact pattern
+    if (result.matches.length > 0) {
+      expect(result.matches[0].confidence).toBeLessThan(0.9);
+    }
+  });
+
+  it("returns results sorted by confidence (highest first)", () => {
+    const input = [
+      "TypeError: Cannot read properties of undefined (reading 'x')",
+      "RangeError: Maximum call stack size exceeded",
+      "Error: Cannot find module 'express'",
+    ].join("\n");
+    const result = analyze(input, { maxResults: 10, minConfidence: 0 });
+    for (let i = 1; i < result.matches.length; i++) {
+      expect(result.matches[i - 1].confidence).toBeGreaterThanOrEqual(
+        result.matches[i].confidence
+      );
+    }
+  });
+
+  it("filters out matches below minConfidence", () => {
+    const result = analyze(
+      "TypeError: Cannot read properties of undefined (reading 'x')",
+      { minConfidence: 0.99 }
+    );
+    for (const match of result.matches) {
+      expect(match.confidence).toBeGreaterThanOrEqual(0.99);
+    }
+  });
+});

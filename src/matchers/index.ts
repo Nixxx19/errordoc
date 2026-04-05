@@ -47,6 +47,55 @@ import {
   gitError, permissionDenied, segfault,
 } from "./misc.js";
 
+// Express.js
+import {
+  expressRouteNotFound, expressBodyUndefined, expressViewError,
+  expressPayloadTooLarge, expressHeadersSent,
+} from "./express.js";
+
+// AWS
+import {
+  awsAccessDenied, awsNoSuchBucket, awsNoSuchKey,
+  awsInvalidAccessKey, awsExpiredToken, awsLambdaTimeout,
+  awsLambdaMemory, awsRegionNotFound,
+} from "./aws.js";
+
+// Firebase
+import {
+  firebaseUserNotFound, firebaseWrongPassword, firebaseEmailInUse,
+  firebaseWeakPassword, firebasePermissionDenied, firebaseDeadlineExceeded,
+} from "./firebase.js";
+
+// Supabase
+import {
+  supabaseJwtExpired, supabaseRlsViolation, supabaseRelationNotExist,
+  supabaseFunctionNotFound, supabasePgrstError,
+} from "./supabase.js";
+
+// npm / package managers
+import {
+  npmEresolve, npmEacces, npmCbNeverCalled,
+  npmEperm, npmDeprecated, npmE404, npmEtarget,
+} from "./npm.js";
+
+// Tailwind / CSS
+import {
+  tailwindModuleNotFound, postcssPluginError,
+  tailwindUnknownAtRule, tailwindApplyError,
+} from "./tailwind.js";
+
+// Auth
+import {
+  oauthError, corsPreflightAuth, unauthorized401,
+  forbidden403, sessionExpired, csrfTokenMismatch,
+} from "./auth.js";
+
+// Memory / Performance
+import {
+  nodeHeapOutOfMemory, enomem, workerThreadError,
+  workerOutOfMemory, eventLoopBlocked,
+} from "./memory-perf.js";
+
 /** All registered matchers, ordered by specificity (most specific first) */
 export const matchers: Matcher[] = [
   // Framework-specific (most specific)
@@ -61,6 +110,13 @@ export const matchers: Matcher[] = [
   reactMinifiedError,
   reactMaxUpdateDepth,
   reactInvalidElement,
+
+  // Express.js
+  expressRouteNotFound,
+  expressBodyUndefined,
+  expressViewError,
+  expressPayloadTooLarge,
+  expressHeadersSent,
 
   // Language-specific
   tsTypeError,
@@ -81,6 +137,31 @@ export const matchers: Matcher[] = [
   goModError,
   goGoroutineLeak,
 
+  // Cloud services — AWS
+  awsAccessDenied,
+  awsNoSuchBucket,
+  awsNoSuchKey,
+  awsInvalidAccessKey,
+  awsExpiredToken,
+  awsLambdaTimeout,
+  awsLambdaMemory,
+  awsRegionNotFound,
+
+  // Cloud services — Firebase
+  firebaseUserNotFound,
+  firebaseWrongPassword,
+  firebaseEmailInUse,
+  firebaseWeakPassword,
+  firebasePermissionDenied,
+  firebaseDeadlineExceeded,
+
+  // Cloud services — Supabase
+  supabaseJwtExpired,
+  supabaseRlsViolation,
+  supabaseRelationNotExist,
+  supabaseFunctionNotFound,
+  supabasePgrstError,
+
   // Database
   prismaError,
   mongoError,
@@ -91,6 +172,21 @@ export const matchers: Matcher[] = [
   viteError,
   eslintError,
   dockerError,
+
+  // Tailwind / CSS
+  tailwindModuleNotFound,
+  postcssPluginError,
+  tailwindUnknownAtRule,
+  tailwindApplyError,
+
+  // npm / package managers
+  npmEresolve,
+  npmEacces,
+  npmCbNeverCalled,
+  npmEperm,
+  npmDeprecated,
+  npmE404,
+  npmEtarget,
 
   // Node.js (broader matchers)
   moduleNotFound,
@@ -103,6 +199,21 @@ export const matchers: Matcher[] = [
   etimeout,
   corsError,
   fetchError,
+
+  // Auth
+  oauthError,
+  corsPreflightAuth,
+  unauthorized401,
+  forbidden403,
+  sessionExpired,
+  csrfTokenMismatch,
+
+  // Memory / Performance
+  nodeHeapOutOfMemory,
+  enomem,
+  workerThreadError,
+  workerOutOfMemory,
+  eventLoopBlocked,
 
   // Generic / cross-language
   envVarMissing,

@@ -1,6 +1,8 @@
 import { analyze } from "./engine.js";
 import { formatText, formatJson, formatMarkdown } from "./formatter.js";
 import { PATTERN_COUNT } from "./matchers/index.js";
+import { execSync } from "child_process";
+import * as readline from "readline";
 
 const args = process.argv.slice(2);
 
@@ -11,6 +13,8 @@ function printHelp() {
   Usage:
     command 2>&1 | errordoc          Pipe error output
     errordoc "error message"         Pass error as argument
+    errordoc fix "error message"     Analyze and offer to run safe fixes
+    command 2>&1 | errordoc fix      Pipe error + offer to run safe fixes
     errordoc --watch                 Watch stdin continuously
     errordoc --stats                 Show matcher statistics
 
@@ -157,7 +161,103 @@ async function watchStdin(opts: ReturnType<typeof parseArgs>) {
   });
 }
 
+function prompt(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(question, (answer: string) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase());
+    });
+  });
+}
+
+async function fixMode(rawArgs: string[]) {
+  // Args after "fix" — strip flags and treat the rest as error input
+  const opts = parseArgs(rawArgs);
+  let input = "";
+
+  if (opts.input.length > 0) {
+    input = opts.input.join(" ");
+  } else if (!process.stdin.isTTY) {
+    input = await readStdin();
+  } else {
+    console.error("errordoc fix: no error input provided");
+    process.exit(1);
+  }
+
+  if (!input.trim()) {
+    console.error("errordoc fix: empty input");
+    process.exit(1);
+  }
+
+  const result = analyze(input, {
+    maxResults: opts.maxResults,
+    minConfidence: opts.minConfidence,
+  });
+
+  const useColor = !opts.noColor && process.stdout.isTTY !== false;
+
+  // Show matches (same as normal mode)
+  switch (opts.format) {
+    case "json":
+      console.log(formatJson(result));
+      break;
+    case "markdown":
+      console.log(formatMarkdown(result));
+      break;
+    default:
+      console.log(formatText(result, useColor));
+  }
+
+  if (result.matches.length === 0) {
+    return;
+  }
+
+  // Iterate through fixes that have commands
+  for (const match of result.matches) {
+    for (const fix of match.fixes) {
+      if (!fix.command) continue;
+
+      if (!fix.safe) {
+        console.log(`\n  ⚠  ${fix.description}`);
+        console.log(`     $ ${fix.command}`);
+        console.log(`     (manual fix — not auto-runnable)\n`);
+        continue;
+      }
+
+      const answer = await prompt(`\n  Run \`${fix.command}\`? (y/n) `);
+      if (answer === "y" || answer === "yes") {
+        try {
+          const output = execSync(fix.command, {
+            encoding: "utf-8",
+            stdio: ["inherit", "pipe", "pipe"],
+          });
+          if (output.trim()) {
+            console.log(output);
+          }
+          console.log("  ✔ Done.");
+        } catch (err: any) {
+          console.error(`  ✖ Command failed:`);
+          if (err.stderr) console.error(err.stderr);
+          if (err.stdout) console.log(err.stdout);
+        }
+      } else {
+        console.log("  Skipped.");
+      }
+    }
+  }
+}
+
 async function main() {
+  // Check for "fix" subcommand
+  if (args[0] === "fix") {
+    await fixMode(args.slice(1));
+    return;
+  }
+
   const opts = parseArgs(args);
 
   if (opts.help) {

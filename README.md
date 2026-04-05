@@ -11,7 +11,7 @@ Pipe your errors, get actual answers. No more googling stack traces at 2am.
 
 You know those errors that make you open 4 browser tabs? This tool just tells you what's wrong and how to fix it. Directly in your terminal.
 
-- 55 error patterns — Node, TypeScript, React, Next.js, Python, Rust, Go, Prisma, Mongo, Postgres, Docker, Git
+- 100+ error patterns — Node, TypeScript, React, Next.js, Python, Rust, Go, Prisma, Mongo, Postgres, Docker, Git
 - zero dependencies
 - catches typos (`exprss` → did you mean `express`?)
 - gives you actual commands to run, not just explanations
@@ -29,6 +29,9 @@ npm install -g @nixxx19/errordoc
 # pass the error directly
 errordoc "Cannot find module 'express'"
 errordoc "TypeError: Cannot read properties of undefined"
+
+# auto-fix mode — prompts to run safe fixes
+errordoc fix "Cannot find module 'express'"
 
 # pipe build errors
 npm run build 2>&1 | errordoc
@@ -77,7 +80,11 @@ analyze(errorText, {
 
 **databases** — Prisma (P1001-P2025), MongoDB (duplicate key, auth, connection), PostgreSQL (missing tables/columns, syntax)
 
-**infra** — Docker (daemon down, port conflicts, disk space, missing images), Git (merge conflicts, detached HEAD, SSH auth), JWT errors, OOM, segfaults, permission denied
+**cloud** — AWS (AccessDenied, NoSuchBucket, Lambda timeout/OOM, ExpiredToken), Firebase (auth errors, permission denied, DEADLINE_EXCEEDED), Supabase (RLS violations, PGRST errors, JWT)
+
+**infra** — Docker (daemon down, port conflicts, disk space, missing images), Git (merge conflicts, detached HEAD, SSH auth), npm (ERESOLVE, E404, peer conflicts), Tailwind/PostCSS errors
+
+**misc** — JWT expired/malformed, OAuth errors, 401/403, CSRF, OOM, segfaults, event loop blocked, worker thread errors
 
 ## how it works
 
@@ -86,7 +93,7 @@ analyze(errorText, {
 
 1. strips ANSI codes from your terminal output
 2. auto-detects what framework/language you're using
-3. runs through 55 matchers ordered most-specific-first
+3. runs through 101 matchers ordered most-specific-first
 4. fuzzy matches module names with levenshtein distance
 5. ranks results by confidence and shows the best matches
 
