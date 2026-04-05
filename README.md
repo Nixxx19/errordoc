@@ -7,6 +7,38 @@ Pipe your errors, get actual answers. No more googling stack traces at 2am.
 
 ![demo](demo.gif)
 
+## before / after
+
+**without errordoc** — you get this and start googling:
+```
+node:internal/modules/cjs/loader:1078
+  throw err;
+  ^
+Error: Cannot find module 'express'
+Require stack:
+- /app/src/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1075:15)
+    at Module._load (node:internal/modules/cjs/loader:920:27)
+    at Module.require (node:internal/modules/cjs/loader:1141:19) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/app/src/server.js' ]
+}
+```
+
+**with errordoc** — you get this and fix it in 5 seconds:
+```
+  ✖ MODULE_NOT_FOUND  95% match
+
+  The npm package "express" is not installed.
+  It's either missing from package.json or not yet installed.
+
+  Fixes:
+  ⚡ Install the missing package
+    $ npm install express
+  ⚡ If using TypeScript, install type definitions
+    $ npm install -D @types/express
+```
+
 ## what is this
 
 You know those errors that make you open 4 browser tabs? This tool just tells you what's wrong and how to fix it. Directly in your terminal.
@@ -48,6 +80,22 @@ errordoc --watch < /var/log/app.log
 ```
 
 > `2>&1` redirects stderr to stdout so the pipe can catch error output
+
+## config
+
+drop a `.errordocrc.json` in your project root or home directory:
+
+```json
+{
+  "maxResults": 3,
+  "minConfidence": 0.5,
+  "format": "text",
+  "noColor": false,
+  "ignore": ["react-key-warning", "node-cors"]
+}
+```
+
+CLI flags override the config file.
 
 ## use it in code
 

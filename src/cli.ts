@@ -1,6 +1,7 @@
 import { analyze } from "./engine.js";
 import { formatText, formatJson, formatMarkdown } from "./formatter.js";
 import { PATTERN_COUNT } from "./matchers/index.js";
+import { loadConfig, mergeConfig } from "./config.js";
 import { execSync } from "child_process";
 import * as readline from "readline";
 
@@ -65,6 +66,15 @@ function parseArgs(args: string[]) {
     version: false,
     stats: false,
     input: [] as string[],
+    ignore: undefined as string[] | undefined,
+  };
+
+  // Track which flags were explicitly set on the CLI
+  const cliWasSet = {
+    format: false,
+    maxResults: false,
+    minConfidence: false,
+    noColor: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -81,17 +91,21 @@ function parseArgs(args: string[]) {
       case "-f":
       case "--format":
         opts.format = (args[++i] ?? "text") as typeof opts.format;
+        cliWasSet.format = true;
         break;
       case "-n":
       case "--max":
         opts.maxResults = parseInt(args[++i] ?? "5", 10);
+        cliWasSet.maxResults = true;
         break;
       case "-c":
       case "--confidence":
         opts.minConfidence = parseFloat(args[++i] ?? "0.3");
+        cliWasSet.minConfidence = true;
         break;
       case "--no-color":
         opts.noColor = true;
+        cliWasSet.noColor = true;
         break;
       case "--watch":
         opts.watch = true;
@@ -105,15 +119,16 @@ function parseArgs(args: string[]) {
         }
     }
   }
-  return opts;
+  return { opts, cliWasSet };
 }
 
-function processInput(input: string, opts: ReturnType<typeof parseArgs>) {
+function processInput(input: string, opts: ReturnType<typeof parseArgs>["opts"]) {
   if (!input.trim()) return;
 
   const result = analyze(input, {
     maxResults: opts.maxResults,
     minConfidence: opts.minConfidence,
+    ignore: opts.ignore,
   });
 
   const useColor = !opts.noColor && process.stdout.isTTY !== false;
@@ -138,7 +153,7 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
-async function watchStdin(opts: ReturnType<typeof parseArgs>) {
+async function watchStdin(opts: ReturnType<typeof parseArgs>["opts"]) {
   process.stdin.setEncoding("utf-8");
   let buffer = "";
 
@@ -176,7 +191,15 @@ function prompt(question: string): Promise<string> {
 
 async function fixMode(rawArgs: string[]) {
   // Args after "fix" — strip flags and treat the rest as error input
-  const opts = parseArgs(rawArgs);
+  const { opts, cliWasSet } = parseArgs(rawArgs);
+  const fileConfig = loadConfig();
+  const merged = mergeConfig(fileConfig, opts, cliWasSet);
+  opts.maxResults = merged.maxResults ?? opts.maxResults;
+  opts.minConfidence = merged.minConfidence ?? opts.minConfidence;
+  opts.format = merged.format ?? opts.format;
+  opts.noColor = merged.noColor ?? opts.noColor;
+  opts.ignore = merged.ignore;
+
   let input = "";
 
   if (opts.input.length > 0) {
@@ -196,6 +219,7 @@ async function fixMode(rawArgs: string[]) {
   const result = analyze(input, {
     maxResults: opts.maxResults,
     minConfidence: opts.minConfidence,
+    ignore: opts.ignore,
   });
 
   const useColor = !opts.noColor && process.stdout.isTTY !== false;
@@ -258,7 +282,14 @@ async function main() {
     return;
   }
 
-  const opts = parseArgs(args);
+  const { opts, cliWasSet } = parseArgs(args);
+  const fileConfig = loadConfig();
+  const merged = mergeConfig(fileConfig, opts, cliWasSet);
+  opts.maxResults = merged.maxResults ?? opts.maxResults;
+  opts.minConfidence = merged.minConfidence ?? opts.minConfidence;
+  opts.format = merged.format ?? opts.format;
+  opts.noColor = merged.noColor ?? opts.noColor;
+  opts.ignore = merged.ignore;
 
   if (opts.help) {
     printHelp();

@@ -30,10 +30,12 @@ export function analyze(
   const activeFrameworks = options.frameworks ?? detectedFrameworks;
   const maxResults = options.maxResults ?? 5;
   const minConfidence = options.minConfidence ?? 0.3;
+  const ignoreSet = new Set(options.ignore ?? []);
 
   const matches: ErrorMatch[] = [];
 
   for (const matcher of matchers) {
+    if (ignoreSet.has(matcher.id)) continue;
     try {
       if (matcher.test(cleaned)) {
         const match = matcher.match(cleaned);

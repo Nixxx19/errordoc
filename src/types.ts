@@ -68,6 +68,8 @@ export interface ErrorDocOptions {
   maxResults?: number;
   /** Minimum confidence threshold (0-1) */
   minConfidence?: number;
+  /** Matcher IDs to skip */
+  ignore?: string[];
 }
 
 export interface AnalysisResult {
