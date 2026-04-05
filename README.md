@@ -1,6 +1,6 @@
 # errordoc
 
-> Turn cryptic error messages into plain-English explanations with actionable fixes. Zero dependencies.
+Pipe your errors, get actual answers. No more googling stack traces at 2am.
 
 [![npm version](https://img.shields.io/npm/v/errordoc)](https://www.npmjs.com/package/errordoc)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,177 +8,132 @@
 ```
 $ npm run build 2>&1 | errordoc
 
-errordoc — found 1 match in 0.4ms
-────────────────────────────────────────────────────────────
   ✖ SyntaxError: import outside module  97% match
 
   You're using ES Module import syntax in a CommonJS file.
   Node.js defaults to CommonJS unless told otherwise.
 
   Fixes:
-  → Add "type": "module" to package.json
+  ⚡ Add "type": "module" to package.json
   → Rename the file to .mjs extension
   → Use require() instead of import
-  → If using TypeScript, set "module": "commonjs" in tsconfig.json
-────────────────────────────────────────────────────────────
 ```
 
-## Why errordoc?
+## what is this
 
-- **55 matchers** covering Node.js, TypeScript, React, Next.js, Python, Rust, Go, Docker, PostgreSQL, MongoDB, Prisma, and more
-- **Zero runtime dependencies** — the core engine is pure TypeScript
-- **Actionable fixes** with runnable shell commands
-- **Framework-aware** — detects your stack and gives context-specific advice
-- **Typo detection** via Levenshtein distance (e.g., `exprss` → "Did you mean `express`?")
-- **Multiple output formats** — colored terminal, JSON (for CI), Markdown
+You know those errors that make you open 4 browser tabs? This tool just tells you what's wrong and how to fix it. Directly in your terminal.
 
-## Install
+- 55 error patterns — Node, TypeScript, React, Next.js, Python, Rust, Go, Prisma, Mongo, Postgres, Docker, Git
+- zero dependencies
+- catches typos (`exprss` → did you mean `express`?)
+- gives you actual commands to run, not just explanations
+- works with any language — just pipe stderr into it
+
+## install
 
 ```bash
-npm install -g errordoc    # Global CLI
-npm install errordoc       # As a dependency
+npm install -g errordoc
 ```
 
-## CLI Usage
+## usage
 
 ```bash
-# Pipe error output
+# pipe anything
 npm run build 2>&1 | errordoc
 cargo build 2>&1 | errordoc
 python app.py 2>&1 | errordoc
+go run main.go 2>&1 | errordoc
 
-# Pass error as argument
+# or just pass the error directly
 errordoc "Cannot find module 'express'"
 errordoc "TypeError: Cannot read properties of undefined"
 
-# Output formats
-errordoc --format json < error.log    # JSON (for CI/scripts)
-errordoc --format markdown < error.log # Markdown
+# json output for CI
+errordoc --format json < error.log
 
-# Watch mode — continuously translate errors
+# watch mode — keeps translating as errors come in
 npm run dev 2>&1 | errordoc --watch
-
-# See all options
-errordoc --help
 ```
 
-## Programmatic API
+## use it in code
 
 ```typescript
 import { analyze, explain } from 'errordoc';
 
-// Full analysis
 const result = analyze("TypeError: Cannot read properties of undefined (reading 'map')");
 console.log(result.matches[0].explanation);
-// → You're trying to access "map" on undefined. The object doesn't exist...
+// → You're trying to access "map" on undefined...
 
-console.log(result.matches[0].fixes);
-// → [{ description: "Add a null check: obj?.map (optional chaining)", safe: false }, ...]
-
-// Quick single match
+// or quick mode
 const match = explain("ECONNREFUSED 127.0.0.1:5432");
-console.log(match?.explanation);
-// → Connection refused to 127.0.0.1:5432. PostgreSQL is not running...
+// → Connection refused. PostgreSQL is not running...
 ```
 
-### Options
-
 ```typescript
-const result = analyze(errorText, {
-  maxResults: 3,        // Max matches to return (default: 5)
-  minConfidence: 0.5,   // Minimum confidence threshold 0-1 (default: 0.3)
-  format: 'json',       // Output format: 'text' | 'json' | 'markdown'
+// options
+analyze(errorText, {
+  maxResults: 3,
+  minConfidence: 0.5,
+  format: 'json',
 });
 ```
 
-## Supported Error Patterns
+## what it catches
 
-### Languages & Runtimes
-| Category | Patterns |
-|---|---|
-| **Node.js** | MODULE_NOT_FOUND, ERR_REQUIRE_ESM, ERR_PACKAGE_PATH_NOT_EXPORTED, ECONNREFUSED, EADDRINUSE, EACCES, ENOENT, ETIMEDOUT, CORS, DNS/fetch errors |
-| **TypeScript** | TS2307, TS2322, TS2339, TS2345, TS2304, TS2531, TS2532, TS2769, TS2741, TS7006, TS18046, TS1005, TS1128, TS2694, TS2305 |
-| **Python** | ModuleNotFoundError, SyntaxError, IndentationError, TypeError, KeyError, AttributeError, ValueError |
-| **Rust** | E0382 (moved value), E0502 (borrow conflict), E0505 (moved while borrowed), E0106/E0621 (lifetimes), E0277 (missing trait), cargo errors |
-| **Go** | nil pointer dereference, import cycle, unused imports, deadlock, panic, go mod errors |
+**languages** — Node.js (MODULE_NOT_FOUND, ECONNREFUSED, EADDRINUSE, CORS, etc), TypeScript (15 TS error codes), Python (ModuleNotFound, KeyError, AttributeError, IndentationError, etc), Rust (borrow checker E0382/E0502/E0505, lifetimes, traits, cargo), Go (nil pointer, deadlock, import cycle, unused imports)
 
-### Frameworks
-| Category | Patterns |
-|---|---|
-| **React** | Invalid hook call, missing key prop, hydration mismatch, max update depth, invalid element type, minified errors |
-| **Next.js** | Server/Client component mismatch, dynamic server usage, build errors, image hostname, 404 |
-| **Vite** | Failed imports, dependency optimization |
-| **Webpack** | Module not found, loader failures |
-| **ESLint** | Config loading, rule configuration |
+**frameworks** — React (hooks, hydration, keys, max update depth), Next.js (server components, dynamic server usage, image config), Vite, Webpack, ESLint
 
-### Databases & Infrastructure
-| Category | Patterns |
-|---|---|
-| **Prisma** | P1001-P2025, client not generated |
-| **MongoDB** | E11000 duplicate key, auth failure, connection errors, validation |
-| **PostgreSQL** | Relation/column not found, syntax errors |
-| **Docker** | Daemon not running, port conflicts, no space, image not found |
-| **Git** | Merge conflicts, detached HEAD, branch divergence, SSH auth |
+**databases** — Prisma (P1001-P2025), MongoDB (duplicate key, auth, connection), PostgreSQL (missing tables/columns, syntax)
 
-### General
-| Category | Patterns |
-|---|---|
-| **Auth** | JWT expired/malformed/invalid signature |
-| **Memory** | Heap out of memory, OOMKilled |
-| **System** | Permission denied, SSH auth, segfault, env vars |
+**infra** — Docker (daemon down, port conflicts, disk space, missing images), Git (merge conflicts, detached HEAD, SSH auth), JWT errors, OOM, segfaults, permission denied
 
-## Architecture
+## how it works
+
+1. strips ANSI codes from your terminal output
+2. auto-detects what framework/language you're using
+3. runs through 55 matchers ordered most-specific-first
+4. fuzzy matches module names with levenshtein distance
+5. ranks results by confidence and shows the best matches
+
+## project structure
 
 ```
 src/
-├── engine.ts          — Core analysis engine
-├── formatter.ts       — Output formatting (text/json/markdown)
-├── cli.ts             — CLI entry point
-├── types.ts           — TypeScript interfaces
-├─��� matchers/
-│   ├── index.ts       — Matcher registry (55 matchers)
-│   ├── node-module.ts ��� Node.js module resolution errors
-│   ├─�� node-runtime.ts — TypeError, ReferenceError, SyntaxError, RangeError
-│   ├── node-network.ts — ECONNREFUSED, EADDRINUSE, CORS, timeouts
-│   ├── typescript.ts  — TS error codes (15 patterns)
-│   ├── react.ts       — Hook errors, hydration, keys, elements
-│   ├── nextjs.ts      — Server components, build, images
-│   ├── python.ts      — Import, syntax, type, key, attribute errors
-│   ├── rust.ts        — Borrow checker, lifetimes, traits, cargo
-│   ├── go.ts          — Nil pointer, import cycle, deadlock, modules
-│   ├── database.ts    — Prisma, MongoDB, PostgreSQL
-│   ├── build-tools.ts — Webpack, Vite, ESLint, Docker
-│   └── misc.ts        — JWT, OOM, git, permissions, segfault
+├── engine.ts           core matching logic
+├── formatter.ts        terminal / json / markdown output
+├── cli.ts              cli entry point
+├── types.ts            typescript types
+├── matchers/
+│   ├── node-module.ts      module resolution
+│   ├── node-runtime.ts     TypeError, ReferenceError, etc
+│   ├── node-network.ts     ECONNREFUSED, CORS, timeouts
+│   ├── typescript.ts       TS error codes
+│   ├── react.ts            hooks, hydration, keys
+│   ├── nextjs.ts           server components, builds
+│   ├── python.ts           python-specific errors
+│   ├── rust.ts             borrow checker, lifetimes
+│   ├── go.ts               nil pointer, deadlock
+│   ├── database.ts         prisma, mongo, postgres
+│   ├── build-tools.ts      webpack, vite, eslint, docker
+│   └── misc.ts             jwt, oom, git, permissions
 └── utils/
-    ├── levenshtein.ts — Fuzzy matching for typo detection
-    └── extract.ts     — Regex helpers, framework detection, ANSI stripping
+    ├── levenshtein.ts      typo detection
+    └── extract.ts          regex helpers, framework detection
 ```
 
-## How It Works
-
-1. **Strip ANSI** — Clean terminal escape codes from input
-2. **Detect frameworks** — Auto-detect React, Next.js, Python, Rust, Go, etc. from the error text
-3. **Pattern matching** — Run through 55 matchers ordered by specificity (framework-specific → language-specific → generic)
-4. **Fuzzy matching** — For module/import errors, use Levenshtein distance to suggest correct names
-5. **Rank by confidence** — Each match has a 0-1 confidence score; results sorted highest first
-
-## Contributing
+## contributing
 
 ```bash
 git clone https://github.com/Nixxx19/errordoc.git
 cd errordoc
 npm install
-npm run dev          # Watch mode
-npm test             # Run tests
-npm run build        # Production build
+npm run dev       # watch mode
+npm test          # run tests
 ```
 
-Adding a new matcher:
-1. Create or edit a file in `src/matchers/`
-2. Export a `Matcher` object with `id`, `name`, `frameworks`, `test()`, and `match()`
-3. Register it in `src/matchers/index.ts`
-4. Add tests in `tests/`
+adding a matcher is straightforward — create a `Matcher` object with `test()` and `match()`, drop it in `src/matchers/`, register it in the index, add a test. check existing matchers for the pattern.
 
-## License
+## license
 
 MIT
