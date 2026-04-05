@@ -1,5 +1,5 @@
 {
-  "name": "errordoc",
+  "name": "@nixxx19/errordoc",
   "version": "0.1.0",
   "description": "AI-powered error translator that turns cryptic stack traces into plain-English explanations with auto-fix suggestions",
   "main": "dist/index.js",

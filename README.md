@@ -2,7 +2,7 @@
 
 Pipe your errors, get actual answers. No more googling stack traces at 2am.
 
-[![npm version](https://img.shields.io/npm/v/errordoc)](https://www.npmjs.com/package/errordoc)
+[![npm version](https://img.shields.io/npm/v/@nixxx19/errordoc)](https://www.npmjs.com/package/@nixxx19/errordoc)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ```
@@ -32,7 +32,7 @@ You know those errors that make you open 4 browser tabs? This tool just tells yo
 ## install
 
 ```bash
-npm install -g errordoc
+npm install -g @nixxx19/errordoc
 ```
 
 ## usage
@@ -58,7 +58,7 @@ npm run dev 2>&1 | errordoc --watch
 ## use it in code
 
 ```typescript
-import { analyze, explain } from 'errordoc';
+import { analyze, explain } from '@nixxx19/errordoc';
 
 const result = analyze("TypeError: Cannot read properties of undefined (reading 'map')");
 console.log(result.matches[0].explanation);
