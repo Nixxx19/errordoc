@@ -5,19 +5,7 @@ Pipe your errors, get actual answers. No more googling stack traces at 2am.
 [![npm version](https://img.shields.io/npm/v/@nixxx19/errordoc)](https://www.npmjs.com/package/@nixxx19/errordoc)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-```
-$ npm run build 2>&1 | errordoc
-
-  ✖ SyntaxError: import outside module  97% match
-
-  You're using ES Module import syntax in a CommonJS file.
-  Node.js defaults to CommonJS unless told otherwise.
-
-  Fixes:
-  ⚡ Add "type": "module" to package.json
-  → Rename the file to .mjs extension
-  → Use require() instead of import
-```
+![demo](demo.gif)
 
 ## what is this
 
@@ -27,7 +15,7 @@ You know those errors that make you open 4 browser tabs? This tool just tells yo
 - zero dependencies
 - catches typos (`exprss` → did you mean `express`?)
 - gives you actual commands to run, not just explanations
-- works with any language — just pipe stderr into it
+- works with any language
 
 ## install
 
@@ -38,21 +26,18 @@ npm install -g @nixxx19/errordoc
 ## usage
 
 ```bash
-# pipe anything
-npm run build 2>&1 | errordoc
-cargo build 2>&1 | errordoc
-python app.py 2>&1 | errordoc
-go run main.go 2>&1 | errordoc
-
-# or just pass the error directly
+# pass the error directly
 errordoc "Cannot find module 'express'"
 errordoc "TypeError: Cannot read properties of undefined"
+
+# pipe from a log file
+errordoc < error.log
 
 # json output for CI
 errordoc --format json < error.log
 
-# watch mode — keeps translating as errors come in
-npm run dev 2>&1 | errordoc --watch
+# watch mode
+errordoc --watch < /var/log/app.log
 ```
 
 ## use it in code
@@ -89,6 +74,21 @@ analyze(errorText, {
 **infra** — Docker (daemon down, port conflicts, disk space, missing images), Git (merge conflicts, detached HEAD, SSH auth), JWT errors, OOM, segfaults, permission denied
 
 ## how it works
+
+```mermaid
+flowchart LR
+    A[error input] --> B[strip ANSI codes]
+    B --> C[detect framework]
+    C --> D[run 55 matchers]
+    D --> E{match found?}
+    E -->|yes| F[rank by confidence]
+    E -->|no| G[no match]
+    F --> H[explanation + fixes]
+
+    style A fill:#ff6b6b,color:#fff
+    style H fill:#51cf66,color:#fff
+    style G fill:#868e96,color:#fff
+```
 
 1. strips ANSI codes from your terminal output
 2. auto-detects what framework/language you're using
