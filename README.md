@@ -30,6 +30,10 @@ npm install -g @nixxx19/errordoc
 errordoc "Cannot find module 'express'"
 errordoc "TypeError: Cannot read properties of undefined"
 
+# pipe build errors
+npm run build 2>&1 | errordoc
+cargo build 2>&1 | errordoc
+
 # pipe from a log file
 errordoc < error.log
 
@@ -39,6 +43,8 @@ errordoc --format json < error.log
 # watch mode
 errordoc --watch < /var/log/app.log
 ```
+
+> `2>&1` redirects stderr to stdout so the pipe can catch error output
 
 ## use it in code
 
