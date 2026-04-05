@@ -81,20 +81,8 @@ analyze(errorText, {
 
 ## how it works
 
-```mermaid
-flowchart LR
-    A[error input] --> B[strip ANSI codes]
-    B --> C[detect framework]
-    C --> D[run 55 matchers]
-    D --> E{match found?}
-    E -->|yes| F[rank by confidence]
-    E -->|no| G[no match]
-    F --> H[explanation + fixes]
+<img width="1415" height="312" alt="Screenshot 2026-04-06 at 1 17 59 AM" src="https://github.com/user-attachments/assets/1cc181f0-bc24-467d-b1a6-0c38ced2d764" />
 
-    style A fill:#ff6b6b,color:#fff
-    style H fill:#51cf66,color:#fff
-    style G fill:#868e96,color:#fff
-```
 
 1. strips ANSI codes from your terminal output
 2. auto-detects what framework/language you're using
