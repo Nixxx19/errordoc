@@ -1,0 +1,66 @@
+{
+  "name": "errordoc",
+  "version": "0.1.0",
+  "description": "AI-powered error translator that turns cryptic stack traces into plain-English explanations with auto-fix suggestions",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "errordoc": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "error",
+    "debug",
+    "debugging",
+    "error-handling",
+    "developer-tools",
+    "dx",
+    "stack-trace",
+    "error-messages",
+    "ai",
+    "cli",
+    "typescript",
+    "node",
+    "react",
+    "nextjs",
+    "python",
+    "rust",
+    "go",
+    "auto-fix"
+  ],
+  "author": "Nityam <nixxspeaks@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nixxx19/errordoc"
+  },
+  "homepage": "https://github.com/Nixxx19/errordoc#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
