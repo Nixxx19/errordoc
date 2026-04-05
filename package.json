@@ -55,7 +55,7 @@
   },
   "homepage": "https://github.com/Nixxx19/errordoc#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
